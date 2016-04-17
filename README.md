@@ -15,5 +15,5 @@ out there to improve the LimiTTer.
 
 Keen to see your design ideas. The first transmitter i have build was a non-rechargable
 battery slot-in solution. But this doesn't work with coin batteries, because of the high
-power load for a few seconds. It only works with a AAA 1.5V Alkaline. A CR2032 slot-in 
-solution would be cool. Maybe you will manage it ... :)
+power load for a few seconds. It only works with a AAA 1.5V Alkaline. A CR2032 or double
+AG13 slot-in solution would be cool. Maybe you will manage it ... :)
