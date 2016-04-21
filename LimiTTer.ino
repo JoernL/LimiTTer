@@ -57,8 +57,8 @@ void setup() {
     digitalWrite(NFCPin2, HIGH);
     pinMode(NFCPin3, OUTPUT);
     digitalWrite(NFCPin3, HIGH);
-    //pinMode(BLEPin, OUTPUT); Enable this for BLE OFF
-    //digitalWrite(BLEPin, HIGH); Enable this for BLE OFF
+    //pinMode(BLEPin, OUTPUT); //Enable this for BLE OFF
+    //digitalWrite(BLEPin, HIGH); //Enable this for BLE OFF
     pinMode(MOSIPin, OUTPUT);
     pinMode(SCKPin, OUTPUT);
     
@@ -292,7 +292,7 @@ void goToSleep(const byte interval, int time) {
  digitalWrite(MOSIPin, LOW);
  digitalWrite(SCKPin, LOW);
  digitalWrite(NFCPin1, LOW); // Turn off all power sources completely
- digitalWrite(NFCPin2, LOW); // for maximum consumption on BM019.
+ digitalWrite(NFCPin2, LOW); // for maximum power save on BM019.
  digitalWrite(NFCPin3, LOW);
  digitalWrite(IRQPin, LOW);
  //digitalWrite(BLEPin, LOW); // Enable this for BLE OFF
