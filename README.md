@@ -17,3 +17,13 @@ Keen to see your design ideas. The first transmitter i have build was a non-rech
 battery slot-in solution. But this doesn't work with coin batteries, because of the high
 power load for a few seconds. It only works with a AAA 1.5V Alkaline. A CR2032 or double
 AG13 slot-in solution would be cool. Maybe you will manage it ... :)
+
+***
+
+<a href="http://picload.org/image/rgddrlpw/img_1054.jpg"><img src="http://picload.org/image/rgddrlpw/img_1054.jpg" align="center" width="600" ></a>
+
+<a href="http://picload.org/image/rgddrlwr/img_1055.jpg"><img src="http://picload.org/image/rgddrlwr/img_1055.jpg" align="center" width="600" ></a>
+
+<a href="http://picload.org/image/rgrrlpgw/img_1016.jpg"><img src="http://picload.org/image/rgrrlpgw/img_1016.jpg" align="center" width="600" ></a>
+
+***
