@@ -1,14 +1,14 @@
 /* LimiTTer sketch for the Arduino UNO/Pro-Mini.
    It scans the Freestyle Libre Sensor every 5 minutes
    and sends the data to the xDrip Android app. You can
-   see the data with an UNO on the serial monitor, too.
+   see the data in the serial monitor of Arduino IDE, too.
    If you want another scan interval, simply change the
    sleepTime value.  
-   For maximum power save you can try to enable all lines
-   with the comment "BLE OFF" and set the sleep time to 22.
+   For maximum power save you should enable all lines
+   with the comment "BLE OFF" and set the sleep time to 28.
    For BLE OFF, VCC pin of HM11 module must be connected with
-   pin 3 on the Arduino. This doesn't work stable with
-   Android 4.4. But with Android > 5.x you can give it a try.
+   pin 3 on the Arduino. This doesn't work with Android 4.4.
+   But with Android > 5.x it is highly recommended.
 
    This sketch is based on a sample sketch for the BM019 module
    from Solutions Cubed.
@@ -42,7 +42,8 @@ const int MOSIPin = 11;
 const int SCKPin = 13;
 byte RXBuffer[24];
 byte NFCReady = 0;  // used to track NFC state
-int sleepTime = 36; // SleepTime ( 36 ~ 5min) Set this to 22 for BLE OFF
+int sleepTime = 36; // SleepTime ( 36 ~ 5min) Set this to 28 for BLE OFF
+float trend[16];
 
 SoftwareSerial ble_Serial(5, 6); // RX | TX
 
@@ -63,11 +64,11 @@ void setup() {
     pinMode(SCKPin, OUTPUT);
     
     Serial.begin(9600);
-    ble_Serial.begin(115200); // Change value to your BLE module rate 
+    ble_Serial.begin(9600); // For some BLE modules this has to be set to 115200. 
     ble_Serial.write("AT+NAME");
     ble_Serial.write("LimiTTer");
     delay(500);
-    ble_Serial.write("AT+PWRM0");
+    ble_Serial.write("AT+PWRM1");
     ble_Serial.write("AT+RESET");
     delay(500);
     SPI.begin();
@@ -227,19 +228,33 @@ float Read_Memory() {
       Serial.print("Glucose pointer: ");
       Serial.print(glucosePointer);
       Serial.println();
-            
+      
       int ii = 0;
       for (int i=8; i<=200; i+=12) {
         if (glucosePointer == ii)
         {
-          String g = trendValues.substring(i+2,i+4) + trendValues.substring(i,i+2);
-          currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-        }
+          if (glucosePointer == 0)
+          {
+            String g = trendValues.substring(190,192) + trendValues.substring(188,190);
+            currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
+          }
+          else
+          {
+            String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
+            currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
+          }
+         
+        }  
 
         ii++;
       }
-            
+     
+     for (int i=8, j=0; i<=200; i+=12,j++) {
+          String t = trendValues.substring(i+2,i+4) + trendValues.substring(i,i+2);
+          trend[j] = Glucose_Reading(strtoul(t.c_str(), NULL ,16));
+       }
     NFCReady = 2;
+    
     return currentGlucose;
     
     }
@@ -252,7 +267,7 @@ float Read_Memory() {
 
 float Glucose_Reading(unsigned int val) {
         int bitmask = 0x0FFF;
-        return ((val & bitmask) / 8);
+        return ((val & bitmask) / 8.5);
 }
 
 String Build_Packet(float glucose) {
@@ -260,7 +275,7 @@ String Build_Packet(float glucose) {
 // Let's build a String which xDrip accepts as a BTWixel packet
 
       String packet = ""; 
-      unsigned long raw = glucose*733; // raw_value 
+      unsigned long raw = glucose*1000; // raw_value 
       packet = String(raw);
       packet += ' ';
       packet += String(216); // fake value
@@ -270,6 +285,14 @@ String Build_Packet(float glucose) {
       Serial.print("Glucose level: ");
       Serial.print(glucose);
       Serial.println();
+      Serial.print("15 minutes-trend: ");
+      Serial.println();
+      for (int i=0; i<16; i++)
+      {
+        Serial.print(trend[i]);
+        Serial.println();
+      }
+      
       return packet;
 }
 
