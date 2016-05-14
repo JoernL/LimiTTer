@@ -3,13 +3,10 @@
    and sends the data to the xDrip Android app. You can
    see the data in the serial monitor of Arduino IDE, too.
    If you want another scan interval, simply change the
-   sleepTime value.  
-   For maximum power save you should enable all lines
-   with the comment "BLE OFF" and set the sleep time to 28.
-   For BLE OFF, VCC pin of HM11 module must be connected with
-   pin 3 on the Arduino. This doesn't work with Android 4.4.
-   But with Android > 5.x it is highly recommended.
-
+   sleepTime value. To work with Android 4 you have to disable
+   all lines containing a "for Android 4" comment and set the
+   sleep time to 36.
+     
    This sketch is based on a sample sketch for the BM019 module
    from Solutions Cubed.
 
@@ -21,7 +18,7 @@
    MOSI: pin 11     MOSI: pin 5 
    MISO: pin 12     MISO: pin4
    SCK: pin 13      SCK: pin 6
-   VCC (pin 3 for BLE OFF)          VCC: pin 9 
+   I/O: pin 3 (VCC with Android 4)  VCC: pin 9 
    I/O: pin 5                       TX:  pin 2
    I/O: pin 6                       RX:  pin 4
 */
@@ -37,12 +34,14 @@ const int IRQPin = 9;  // Sends wake-up pulse for BM019
 const int NFCPin1 = 7; // Power pin BM019
 const int NFCPin2 = 8; // Power pin BM019
 const int NFCPin3 = 4; // Power pin BM019
-//const int BLEPin = 3; // BLE power pin. Enable this for BLE OFF
+const int BLEPin = 3; // BLE power pin. Disable this for Android 4
 const int MOSIPin = 11;
 const int SCKPin = 13;
 byte RXBuffer[24];
 byte NFCReady = 0;  // used to track NFC state
-int sleepTime = 36; // SleepTime ( 36 ~ 5min) Set this to 28 for BLE OFF
+byte FirstRun = 1;
+int sleepTime = 28; // SleepTime. Set this to 36 for Android 4
+float lastGlucose;
 float trend[16];
 
 SoftwareSerial ble_Serial(5, 6); // RX | TX
@@ -58,19 +57,30 @@ void setup() {
     digitalWrite(NFCPin2, HIGH);
     pinMode(NFCPin3, OUTPUT);
     digitalWrite(NFCPin3, HIGH);
-    //pinMode(BLEPin, OUTPUT); //Enable this for BLE OFF
-    //digitalWrite(BLEPin, HIGH); //Enable this for BLE OFF
+    pinMode(BLEPin, OUTPUT); // Disable this for Android 4
+    digitalWrite(BLEPin, HIGH); // Disable this for Android 4
     pinMode(MOSIPin, OUTPUT);
     pinMode(SCKPin, OUTPUT);
-    
+
     Serial.begin(9600);
-    ble_Serial.begin(9600); // For some BLE modules this has to be set to 115200. 
-    ble_Serial.write("AT+NAME");
-    ble_Serial.write("LimiTTer");
-    delay(500);
-    ble_Serial.write("AT+PWRM1");
+    
+    long bleBaudrate[8] = {1200,2400,4800,9600,19200,38400,57600,115200};
+    for (int i=0; i<8; i++)
+    {
+      ble_Serial.begin(bleBaudrate[i]);
+      ble_Serial.write("AT");
+      delay(500);
+      char c = ble_Serial.read();
+      char d = ble_Serial.read();
+      if (c == 'O' && d == 'K')
+        break;
+    }
+    delay(100);
+    ble_Serial.write("AT+NAMELimiTTer");
+    delay(100);
     ble_Serial.write("AT+RESET");
     delay(500);
+        
     SPI.begin();
     SPI.setDataMode(SPI_MODE0);
     SPI.setBitOrder(MSBFIRST);
@@ -82,7 +92,15 @@ void setup() {
     digitalWrite(IRQPin, HIGH);     // mode 
     delay(10);
     digitalWrite(IRQPin, LOW);
-    
+}
+
+void restartBLE() {
+    digitalWrite(BLEPin, HIGH);
+    digitalWrite(5, HIGH);
+    digitalWrite(6, HIGH);
+    delay(5000);
+    ble_Serial.write("AT+RESET");
+    delay(500);
 }
 
 void SetProtocol_Command() {
@@ -237,23 +255,44 @@ float Read_Memory() {
           {
             String g = trendValues.substring(190,192) + trendValues.substring(188,190);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
+            if ((FirstRun != 1) && ((currentGlucose - lastGlucose) > 50))
+            {
+              g = trendValues.substring(178,180) + trendValues.substring(176,178);
+              currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
+            }
+          }
+          else if (glucosePointer == 1)
+          {
+            String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
+            currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
+            if ((FirstRun != 1) && ((currentGlucose - lastGlucose) > 50))
+            {
+              g = trendValues.substring(190,192) + trendValues.substring(188,190);
+              currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
+            }
           }
           else
           {
             String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
+            if ((FirstRun != 1) && ((currentGlucose - lastGlucose) > 50))
+            {
+              g = trendValues.substring(i-22,i-20) + trendValues.substring(i-24,i-22);
+              currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
+            }
           }
          
         }  
 
         ii++;
       }
-     
+     lastGlucose = currentGlucose;
      for (int i=8, j=0; i<=200; i+=12,j++) {
           String t = trendValues.substring(i+2,i+4) + trendValues.substring(i,i+2);
           trend[j] = Glucose_Reading(strtoul(t.c_str(), NULL ,16));
        }
     NFCReady = 2;
+    FirstRun = 0;
     
     return currentGlucose;
     
@@ -297,8 +336,7 @@ String Build_Packet(float glucose) {
 }
 
 void Send_Packet(String packet) {
-   
-    if ((packet.substring(0,1) != "0"))
+   if ((packet.substring(0,1) != "0"))
     {
       Serial.println();
       Serial.print("xDrip packet: ");
@@ -318,9 +356,10 @@ void goToSleep(const byte interval, int time) {
  digitalWrite(NFCPin2, LOW); // for maximum power save on BM019.
  digitalWrite(NFCPin3, LOW);
  digitalWrite(IRQPin, LOW);
- //digitalWrite(BLEPin, LOW); // Enable this for BLE OFF
- //digitalWrite(5, LOW); // Enable this for BLE OFF
- //digitalWrite(6, LOW); // Enable this for BLE OFF
+ digitalWrite(5, LOW); // Disable this for Android 4
+ digitalWrite(6, LOW); // Disable this for Android 4
+ digitalWrite(BLEPin, LOW); // Disable this for Android 4
+ 
  for (int i=0; i<time; i++) {
  MCUSR = 0;                         
  WDTCSR |= 0b00011000;               
@@ -340,10 +379,8 @@ void wakeUp() {
     sleep_disable();
     power_all_enable();
     wdt_reset();
-    //digitalWrite(BLEPin, HIGH); // Enable this for BLE OFF
-    //digitalWrite(5, HIGH); // Enable this for BLE OFF
-    //digitalWrite(6, HIGH); // Enable this for BLE OFF
-    //delay(60000); //  Enable this for BLE OFF. Reconnect time
+    restartBLE(); // Disable this for Android 4
+    delay(80000); // Disable this for Android 4
     digitalWrite(NFCPin1, HIGH);
     digitalWrite(NFCPin2, HIGH);
     digitalWrite(NFCPin3, HIGH);
@@ -362,7 +399,7 @@ void wakeUp() {
     NFCReady = 0;
   }
 void loop() {
-
+  
   if (NFCReady == 0)
   {
     SetProtocol_Command(); // ISO 15693 settings
@@ -371,7 +408,7 @@ void loop() {
       
   else if (NFCReady == 1)
   {
-    for (int i=0; i<2; i++) {
+    for (int i=0; i<3; i++) {
     Inventory_Command(); // sensor in range?
     if (NFCReady == 2)
       break;
@@ -383,15 +420,13 @@ void loop() {
     delay(100); 
     }
   }
-     
   else
   {
     String xdripPacket = Build_Packet(Read_Memory());
     Send_Packet(xdripPacket);
     goToSleep (0b100001, sleepTime);
     wakeUp();
-    delay(100);    
+    delay(100);
   }
-  
 }
 
