@@ -18,6 +18,7 @@ battery slot-in solution. But this doesn't work with coin batteries, because of 
 power load for a few seconds. It only works with a AAA 1.5V Alkaline. A CR2032 or double
 AG13 slot-in solution would be cool. Maybe you will manage it ... :)
 
+Feel free and join our chatroom here: [![Gitter](https://badges.gitter.im/JoernL/LimiTTer.svg)](https://gitter.im/JoernL/LimiTTer?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 ***
 
 <a href="http://picload.org/image/rgddrlpw/img_1054.jpg"><img src="http://picload.org/image/rgddrlpw/img_1054.jpg" align="center" width="600" ></a>
