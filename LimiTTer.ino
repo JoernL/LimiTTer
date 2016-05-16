@@ -255,7 +255,7 @@ float Read_Memory() {
           {
             String g = trendValues.substring(190,192) + trendValues.substring(188,190);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((currentGlucose - lastGlucose) > 50))
+            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50))
             {
               g = trendValues.substring(178,180) + trendValues.substring(176,178);
               currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
@@ -265,7 +265,7 @@ float Read_Memory() {
           {
             String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((currentGlucose - lastGlucose) > 50))
+            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50))
             {
               g = trendValues.substring(190,192) + trendValues.substring(188,190);
               currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
@@ -275,7 +275,7 @@ float Read_Memory() {
           {
             String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((currentGlucose - lastGlucose) > 50))
+            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50))
             {
               g = trendValues.substring(i-22,i-20) + trendValues.substring(i-24,i-22);
               currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
