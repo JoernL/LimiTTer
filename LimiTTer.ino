@@ -189,6 +189,7 @@ float Read_Memory() {
  String hexPointer = "";
  String trendValues = "";
  float currentGlucose;
+ float shownGlucose;
  int glucosePointer;
   
  for ( int b = 3; b < 40; b++) {
@@ -287,14 +288,28 @@ float Read_Memory() {
         ii++;
       }
      lastGlucose = currentGlucose;
-     for (int i=8, j=0; i<=200; i+=12,j++) {
+     for (int i=8, j=0; i<200; i+=12,j++) {
           String t = trendValues.substring(i+2,i+4) + trendValues.substring(i,i+2);
           trend[j] = Glucose_Reading(strtoul(t.c_str(), NULL ,16));
        }
+
+    if (FirstRun == 1)
+       lastGlucose = currentGlucose;
+         
+    shownGlucose = currentGlucose;
+     
+    if ((currentGlucose - lastGlucose) > 5)
+       shownGlucose *= 1.08;
+    else if ((lastGlucose - currentGlucose) > 5)
+       shownGlucose *= 0.92;
+       
+    lastGlucose = currentGlucose; 
+
+    
     NFCReady = 2;
     FirstRun = 0;
     
-    return currentGlucose;
+    return shownGlucose;
     
     }
   else
@@ -341,9 +356,12 @@ void Send_Packet(String packet) {
       Serial.println();
       Serial.print("xDrip packet: ");
       Serial.print(packet);
-      Serial.println();    
-      ble_Serial.print(packet);
-      delay(100);
+      Serial.println();
+      for (int i=0; i<5; i++)
+      {   
+        ble_Serial.print(packet);
+        delay(1000);
+      }
     }
   }
 
