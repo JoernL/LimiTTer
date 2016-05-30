@@ -190,6 +190,7 @@ float Read_Memory() {
  String trendValues = "";
  float currentGlucose;
  float shownGlucose;
+ float trendGlucose;
  int glucosePointer;
   
  for ( int b = 3; b < 40; b++) {
@@ -255,32 +256,28 @@ float Read_Memory() {
           if (glucosePointer == 0)
           {
             String g = trendValues.substring(190,192) + trendValues.substring(188,190);
+            String h = trendValues.substring(178,180) + trendValues.substring(176,178);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50))
-            {
-              g = trendValues.substring(178,180) + trendValues.substring(176,178);
-              currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            }
+            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50)) // invalid trend check
+               currentGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
           }
           else if (glucosePointer == 1)
           {
             String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
+            String h = trendValues.substring(190,192) + trendValues.substring(188,190);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50))
-            {
-              g = trendValues.substring(190,192) + trendValues.substring(188,190);
-              currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            }
+            trendGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
+            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50)) // invalid trend check
+               currentGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
           }
           else
           {
             String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
+            String h = trendValues.substring(i-22,i-20) + trendValues.substring(i-24,i-22);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50))
-            {
-              g = trendValues.substring(i-22,i-20) + trendValues.substring(i-24,i-22);
-              currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            }
+            trendGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
+            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50)) // invalid trend check
+               currentGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
           }
          
         }  
@@ -296,8 +293,52 @@ float Read_Memory() {
     if (FirstRun == 1)
        lastGlucose = currentGlucose;
          
-    shownGlucose = currentGlucose;
-     
+    shownGlucose = trend[0];
+
+    if ((lastGlucose < currentGlucose) && (currentGlucose < trendGlucose)) // apex from RISE -> FALL
+    {
+      for (int i=0; i<15; i++)                                             // taking the lowest value
+      {
+        if (((shownGlucose - trend[i+1]) > 50) || (trend[i+1] - shownGlucose) > 50) // invalid trend check
+           continue;
+        else if (trend[i+1] < shownGlucose)
+           shownGlucose = trend[i+1];   
+      }
+    }
+    else if (lastGlucose < currentGlucose) // RISE - taking the highest value
+    {
+      for (int i=0; i<15; i++)
+      {
+        if (((shownGlucose - trend[i+1]) > 50) || (trend[i+1] - shownGlucose) > 50) // invalid trend check
+           continue;
+        else if (trend[i+1] > shownGlucose)
+           shownGlucose = trend[i+1];   
+      }
+    }
+    else if ((lastGlucose > currentGlucose) && (currentGlucose > trendGlucose)) // apex from FALL -> RISE
+    {
+      for (int i=0; i<15; i++)                                             // taking the highest value
+      {
+        if (((shownGlucose - trend[i+1]) > 50) || (trend[i+1] - shownGlucose) > 50) // invalid trend check
+           continue;
+        else if (trend[i+1] > shownGlucose)
+           shownGlucose = trend[i+1];
+      }
+    }
+    else if (lastGlucose > currentGlucose) // FALLS - taking the lowest value
+    {
+      for (int i=0; i<15; i++)
+      {
+        if (((shownGlucose - trend[i+1]) > 50) || (trend[i+1] - shownGlucose) > 50) // invalid trend check
+           continue;
+        else if (trend[i+1] < shownGlucose)
+           shownGlucose = trend[i+1];
+      }
+    }
+    else
+       shownGlucose = currentGlucose;
+
+    
     if ((currentGlucose - lastGlucose) > 5)
        shownGlucose *= 1.08;
     else if ((lastGlucose - currentGlucose) > 5)
@@ -360,7 +401,7 @@ void Send_Packet(String packet) {
       for (int i=0; i<5; i++)
       {   
         ble_Serial.print(packet);
-        delay(1000);
+        delay(500);
       }
     }
   }
