@@ -362,7 +362,7 @@ float Read_Memory() {
 
 float Glucose_Reading(unsigned int val) {
         int bitmask = 0x0FFF;
-        return ((val & bitmask) / 8.5);
+        return (((val & bitmask)-181) / 7.26);
 }
 
 String Build_Packet(float glucose) {
