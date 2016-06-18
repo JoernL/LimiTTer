@@ -21,9 +21,13 @@ AG13 slot-in solution would be cool. Maybe you will manage it ... :)
 Feel free and join our chatroom here: [![Gitter](https://badges.gitter.im/JoernL/LimiTTer.svg)](https://gitter.im/JoernL/LimiTTer?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 ***
 
-<a href="http://picload.org/image/rgddrlpw/img_1054.jpg"><img src="http://picload.org/image/rgddrlpw/img_1054.jpg" align="center" width="600" ></a>
+<a href="http://picload.org/image/rgwcpagw/img_1113.jpg"><img src="http://picload.org/image/rgwcpagw/img_1113.jpg" align="center" width="600" ></a>
 
-<a href="http://picload.org/image/rgddrlwr/img_1055.jpg"><img src="http://picload.org/image/rgddrlwr/img_1055.jpg" align="center" width="600" ></a>
+<a href="http://picload.org/image/rgwcparr/img_1114.jpg"><img src="http://picload.org/image/rgwcparr/img_1114.jpg" align="center" width="600" ></a>
+
+<a href="http://picload.org/image/rgwcparl/img_1116.jpg"><img src="http://picload.org/image/rgwcparl/img_1116.jpg" align="center" width="600" ></a>
+
+<a href="http://picload.org/image/rgwcpara/img_1115.jpg"><img src="http://picload.org/image/rgwcpara/img_1115.jpg" align="center" width="600" ></a>
 
 <a href="http://picload.org/image/rgrrlpgw/img_1016.jpg"><img src="http://picload.org/image/rgrrlpgw/img_1016.jpg" align="center" width="600" ></a>
 
