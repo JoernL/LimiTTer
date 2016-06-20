@@ -34,7 +34,7 @@ const int IRQPin = 9;  // Sends wake-up pulse for BM019
 const int NFCPin1 = 7; // Power pin BM019
 const int NFCPin2 = 8; // Power pin BM019
 const int NFCPin3 = 4; // Power pin BM019
-const int BLEPin = 3; // BLE power pin. Disable this for Android 4
+const int BLEPin = 3; // BLE power pin.
 const int MOSIPin = 11;
 const int SCKPin = 13;
 byte RXBuffer[24];
@@ -339,10 +339,10 @@ float Read_Memory() {
        shownGlucose = currentGlucose;
 
     
-    if ((currentGlucose - lastGlucose) > 5)
+    /*if ((currentGlucose - lastGlucose) > 5)
        shownGlucose *= 1.08;
     else if ((lastGlucose - currentGlucose) > 5)
-       shownGlucose *= 0.92;
+       shownGlucose *= 0.92;*/
        
     lastGlucose = currentGlucose; 
 
@@ -362,7 +362,8 @@ float Read_Memory() {
 
 float Glucose_Reading(unsigned int val) {
         int bitmask = 0x0FFF;
-        return (((val & bitmask)-181) / 7.26);
+        return ((val & bitmask) / 8.5);
+        //return (((val & bitmask)-181)/7.26);
 }
 
 String Build_Packet(float glucose) {
