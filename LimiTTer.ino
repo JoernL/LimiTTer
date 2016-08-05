@@ -29,6 +29,9 @@
 #include <avr/power.h>
 #include <avr/wdt.h>
 
+#define MIN_V 3450 // battery empty level
+#define MAX_V 4050 // battery full level
+
 const int SSPin = 10;  // Slave Select pin
 const int IRQPin = 9;  // Sends wake-up pulse for BM019
 const int NFCPin1 = 7; // Power pin BM019
@@ -40,6 +43,9 @@ const int SCKPin = 13;
 byte RXBuffer[24];
 byte NFCReady = 0;  // used to track NFC state
 byte FirstRun = 1;
+byte batteryLow;
+int batteryPcnt;
+long batteryMv;
 int sleepTime = 28; // SleepTime. Set this to 36 for Android 4
 float lastGlucose;
 float trend[16];
@@ -63,7 +69,7 @@ void setup() {
     pinMode(SCKPin, OUTPUT);
 
     Serial.begin(9600);
-    
+
     long bleBaudrate[8] = {1200,2400,4800,9600,19200,38400,57600,115200};
     for (int i=0; i<8; i++)
     {
@@ -98,7 +104,7 @@ void restartBLE() {
     digitalWrite(BLEPin, HIGH);
     digitalWrite(5, HIGH);
     digitalWrite(6, HIGH);
-    delay(5000);
+    delay(500);
     ble_Serial.write("AT+RESET");
     delay(500);
 }
@@ -363,7 +369,6 @@ float Read_Memory() {
 float Glucose_Reading(unsigned int val) {
         int bitmask = 0x0FFF;
         return ((val & bitmask) / 8.5);
-        //return (((val & bitmask)-181)/7.26);
 }
 
 String Build_Packet(float glucose) {
@@ -374,9 +379,9 @@ String Build_Packet(float glucose) {
       unsigned long raw = glucose*1000; // raw_value 
       packet = String(raw);
       packet += ' ';
-      packet += String(216); // fake value
+      packet += String(batteryMv);
       packet += ' ';
-      packet += String(100); // fake value
+      packet += String(batteryPcnt);
       Serial.println();
       Serial.print("Glucose level: ");
       Serial.print(glucose);
@@ -388,7 +393,14 @@ String Build_Packet(float glucose) {
         Serial.print(trend[i]);
         Serial.println();
       }
-      
+      Serial.print("Battery level: ");
+      Serial.print(batteryPcnt);
+      Serial.print("%");
+      Serial.println();
+      Serial.print("Battery mVolts: ");
+      Serial.print(batteryMv);
+      Serial.print("mV");
+      Serial.println();
       return packet;
 }
 
@@ -399,13 +411,37 @@ void Send_Packet(String packet) {
       Serial.print("xDrip packet: ");
       Serial.print(packet);
       Serial.println();
-      for (int i=0; i<5; i++)
-      {   
-        ble_Serial.print(packet);
-        delay(500);
-      }
+      ble_Serial.print(packet);
+      delay(1000);
     }
   }
+
+int readVcc() {
+  // Read 1.1V reference against AVcc
+  // set the reference to Vcc and the measurement to the internal 1.1V reference
+  #if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+    ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  #elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
+    ADMUX = _BV(MUX5) | _BV(MUX0);
+  #elif defined (__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
+    ADMUX = _BV(MUX3) | _BV(MUX2);
+  #else
+    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  #endif  
+ 
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Start conversion
+  while (bit_is_set(ADCSRA,ADSC)); // measuring
+ 
+  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH  
+  uint8_t high = ADCH; // unlocks both
+ 
+  batteryMv = (high<<8) | low;
+ 
+  batteryMv = 1125300L / batteryMv; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
+  int batteryLevel = min(map(batteryMv, MIN_V, MAX_V, 0, 100), 100); // Convert voltage to percentage
+  return batteryLevel;
+}
 
 void goToSleep(const byte interval, int time) {
  
@@ -458,14 +494,65 @@ void wakeUp() {
     
     NFCReady = 0;
   }
+
+void lowBatterySleep() {
+ 
+ SPI.end();
+ digitalWrite(MOSIPin, LOW);
+ digitalWrite(SCKPin, LOW);
+ digitalWrite(NFCPin1, LOW); // Turn off all power sources completely
+ digitalWrite(NFCPin2, LOW); // for maximum power save on BM019.
+ digitalWrite(NFCPin3, LOW);
+ digitalWrite(IRQPin, LOW);
+ digitalWrite(5, LOW); // Disable this for Android 4
+ digitalWrite(6, LOW); // Disable this for Android 4
+ digitalWrite(BLEPin, LOW); // Disable this for Android 4
+
+ Serial.print("Battery low! LEVEL: ");
+ Serial.print(batteryPcnt);
+ Serial.print("%");
+ Serial.println();
+ delay(100);
+
+ // Switch LED on and then off shortly
+    for (int i=0; i<10; i++) {
+      digitalWrite(SCKPin, HIGH);
+      delay(50);
+      digitalWrite(SCKPin, LOW);
+      delay(100);
+    }
+    
+ MCUSR = 0;                         
+ WDTCSR |= 0b00011000;               
+ WDTCSR =  0b01000000 | 0b100001;
+ set_sleep_mode (SLEEP_MODE_PWR_DOWN);
+ sleep_enable();
+ sleep_cpu();           
+ sleep_disable();
+ power_all_enable();
+ wdt_reset(); 
+}
+
 void loop() {
-  
+
+  batteryPcnt = readVcc();
+  if (batteryPcnt < 1)
+    batteryLow = 1;
+  while (batteryLow == 1)
+  {
+    lowBatterySleep();
+    batteryPcnt = readVcc();
+    if (batteryPcnt > 10)
+    {
+      batteryLow = 0;
+      wakeUp();
+    }
+  }
   if (NFCReady == 0)
   {
     SetProtocol_Command(); // ISO 15693 settings
     delay(100);
   }
-      
   else if (NFCReady == 1)
   {
     for (int i=0; i<3; i++) {
