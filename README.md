@@ -7,6 +7,10 @@ scan the sensor with the reader. The LimiTTer do this for you - every 5 minutes.
 the glucose value to your smartphone which must have the xDrip app installed. xDrip is really
 a great and matured app for Android. It can send the glucose values to your smartwatch or
 via Nightscout into the cloud. The most important feature is to having a night guard.
+xDrip+ is an improved version of xDrip and now the default app for the LimiTTer.
+You will find it here:</br></br>
+<a href="https://jamorham.github.io/#xdrip-plus">https://jamorham.github.io/#xdrip-plus</a></br><br>
+Click on "Download latest APK" or choose the "Nightly Snapshots" for the very latest ones.
 
 Please note, that LimiTTer is NOT maintained by Abbott. It is a experimental DIY project.
 You will built your own individual LimiTTer. So you are responsible yourself for what you
