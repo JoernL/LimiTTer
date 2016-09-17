@@ -46,7 +46,7 @@ byte FirstRun = 1;
 byte batteryLow;
 int batteryPcnt;
 long batteryMv;
-int sleepTime = 28; // SleepTime. Set this to 36 for Android 4
+int sleepTime = 32; // SleepTime. Set this to 36 for Android 4
 float lastGlucose;
 float trend[16];
 
@@ -476,7 +476,7 @@ void wakeUp() {
     power_all_enable();
     wdt_reset();
     restartBLE(); // Disable this for Android 4
-    delay(80000); // Disable this for Android 4
+    delay(40000); // Disable this for Android 4
     digitalWrite(NFCPin1, HIGH);
     digitalWrite(NFCPin2, HIGH);
     digitalWrite(NFCPin3, HIGH);
