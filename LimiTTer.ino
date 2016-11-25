@@ -47,6 +47,8 @@ byte batteryLow;
 int batteryPcnt;
 long batteryMv;
 int sleepTime = 32; // SleepTime. Set this to 36 for Android 4
+int noDiffCount = 0;
+int sensorMinutesElapse;
 float lastGlucose;
 float trend[16];
 
@@ -194,12 +196,14 @@ float Read_Memory() {
  byte oneBlock[8];
  String hexPointer = "";
  String trendValues = "";
+ String hexMinutes = "";
+ String elapsedMinutes = "";
  float currentGlucose;
  float shownGlucose;
  float trendGlucose;
  int glucosePointer;
   
- for ( int b = 3; b < 40; b++) {
+ for ( int b = 3; b < 16; b++) {
  
   digitalWrite(SSPin, LOW);
   SPI.transfer(0x00);  // SPI control byte to send command to CR95HF
@@ -244,12 +248,59 @@ float Read_Memory() {
   pout[0] = 0;
   Serial.println(str);
   trendValues += str;
+
+ }
+
+ digitalWrite(SSPin, LOW);
+  SPI.transfer(0x00);  // SPI control byte to send command to CR95HF
+  SPI.transfer(0x04);  // Send Receive CR95HF command
+  SPI.transfer(0x03);  // length of data that follows
+  SPI.transfer(0x02);  // request Flags byte
+  SPI.transfer(0x20);  // Read Single Block command for ISO/IEC 15693
+  SPI.transfer(39);  // memory block address
+  digitalWrite(SSPin, HIGH);
+  delay(1);
+ 
+  digitalWrite(SSPin, LOW);
+  while(RXBuffer[0] != 8)
+    {
+    RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
+    RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
+    }
+  digitalWrite(SSPin, HIGH);
+  delay(1);
+
+  digitalWrite(SSPin, LOW);
+  SPI.transfer(0x02);   // SPI control byte for read         
+  RXBuffer[0] = SPI.transfer(0);  // response code
+  RXBuffer[1] = SPI.transfer(0);  // length of data
+ for (byte i=0;i<RXBuffer[1];i++)
+   RXBuffer[i+2]=SPI.transfer(0);  // data
+   
+  digitalWrite(SSPin, HIGH);
+  delay(1);
+  
+ for (int i = 0; i < 8; i++)
+   oneBlock[i] = RXBuffer[i+3];
     
- }   
+  char str[24];
+  unsigned char * pin = oneBlock;
+  const char * hex = "0123456789ABCDEF";
+  char * pout = str;
+  for(; pin < oneBlock+8; pout+=2, pin++) {
+      pout[0] = hex[(*pin>>4) & 0xF];
+      pout[1] = hex[ *pin     & 0xF];
+  }
+  pout[0] = 0;
+  elapsedMinutes += str;
+    
   if (RXBuffer[0] == 128) // is response code good?
     {
+      hexMinutes = elapsedMinutes.substring(10,12) + elapsedMinutes.substring(8,10);
       hexPointer = trendValues.substring(4,6);
+      sensorMinutesElapse = strtoul(hexMinutes.c_str(), NULL, 16);
       glucosePointer = strtoul(hexPointer.c_str(), NULL, 16);
+             
       Serial.println();
       Serial.print("Glucose pointer: ");
       Serial.print(glucosePointer);
@@ -344,19 +395,22 @@ float Read_Memory() {
     else
        shownGlucose = currentGlucose;
 
-    
-    /*if ((currentGlucose - lastGlucose) > 5)
-       shownGlucose *= 1.08;
-    else if ((lastGlucose - currentGlucose) > 5)
-       shownGlucose *= 0.92;*/
-       
+    if ((lastGlucose == currentGlucose) && (sensorMinutesElapse > 21000)) // Expired sensor check
+      noDiffCount++;
+
+    if (lastGlucose != currentGlucose) // Reset the counter
+      noDiffCount = 0;
+      
     lastGlucose = currentGlucose; 
 
     
     NFCReady = 2;
     FirstRun = 0;
-    
-    return shownGlucose;
+
+    if (noDiffCount > 5)
+      return 0;
+    else  
+      return shownGlucose;
     
     }
   else
@@ -376,12 +430,14 @@ String Build_Packet(float glucose) {
 // Let's build a String which xDrip accepts as a BTWixel packet
 
       String packet = ""; 
-      unsigned long raw = glucose*1000; // raw_value 
+      unsigned long raw = glucose*1000; // raw_value
       packet = String(raw);
       packet += ' ';
       packet += String(batteryMv);
       packet += ' ';
       packet += String(batteryPcnt);
+      packet += ' ';
+      packet += String(sensorMinutesElapse);
       Serial.println();
       Serial.print("Glucose level: ");
       Serial.print(glucose);
@@ -400,6 +456,10 @@ String Build_Packet(float glucose) {
       Serial.print("Battery mVolts: ");
       Serial.print(batteryMv);
       Serial.print("mV");
+      Serial.println();
+      Serial.print("Sensor lifetime: ");
+      Serial.print(sensorMinutesElapse);
+      Serial.print(" minutes elapsed");
       Serial.println();
       return packet;
 }
