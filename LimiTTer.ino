@@ -301,10 +301,10 @@ float Read_Memory() {
       sensorMinutesElapse = strtoul(hexMinutes.c_str(), NULL, 16);
       glucosePointer = strtoul(hexPointer.c_str(), NULL, 16);
              
-      Serial.println();
+      Serial.println("");
       Serial.print("Glucose pointer: ");
       Serial.print(glucosePointer);
-      Serial.println();
+      Serial.println("");
       
       int ii = 0;
       for (int i=8; i<=200; i+=12) {
@@ -315,8 +315,7 @@ float Read_Memory() {
             String g = trendValues.substring(190,192) + trendValues.substring(188,190);
             String h = trendValues.substring(178,180) + trendValues.substring(176,178);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50)) // invalid trend check
-               currentGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
+            trendGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
           }
           else if (glucosePointer == 1)
           {
@@ -324,8 +323,6 @@ float Read_Memory() {
             String h = trendValues.substring(190,192) + trendValues.substring(188,190);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
             trendGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50)) // invalid trend check
-               currentGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
           }
           else
           {
@@ -333,15 +330,13 @@ float Read_Memory() {
             String h = trendValues.substring(i-22,i-20) + trendValues.substring(i-24,i-22);
             currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
             trendGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
-            if ((FirstRun != 1) && ((lastGlucose - currentGlucose) > 50)) // invalid trend check
-               currentGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
           }
          
         }  
 
         ii++;
       }
-     lastGlucose = currentGlucose;
+     
      for (int i=8, j=0; i<200; i+=12,j++) {
           String t = trendValues.substring(i+2,i+4) + trendValues.substring(i,i+2);
           trend[j] = Glucose_Reading(strtoul(t.c_str(), NULL ,16));
@@ -349,14 +344,25 @@ float Read_Memory() {
 
     if (FirstRun == 1)
        lastGlucose = currentGlucose;
-         
-    shownGlucose = trend[0];
 
+    shownGlucose = trend[0];
+    
+    for (int i=0; i<16; i++)
+    {
+      if (((lastGlucose - trend[i]) > 50) || ((trend[i] - lastGlucose) > 50)) // invalid trend check
+         continue;
+      else
+      {
+         shownGlucose = trend[i];
+         break;
+      }
+    }
+    
     if ((lastGlucose < currentGlucose) && (currentGlucose < trendGlucose)) // apex from RISE -> FALL
     {
       for (int i=0; i<15; i++)                                             // taking the lowest value
       {
-        if (((shownGlucose - trend[i+1]) > 50) || (trend[i+1] - shownGlucose) > 50) // invalid trend check
+        if (((shownGlucose - trend[i+1]) > 50) || ((trend[i+1] - shownGlucose) > 50)) // invalid trend check
            continue;
         else if (trend[i+1] < shownGlucose)
            shownGlucose = trend[i+1];   
@@ -366,7 +372,7 @@ float Read_Memory() {
     {
       for (int i=0; i<15; i++)
       {
-        if (((shownGlucose - trend[i+1]) > 50) || (trend[i+1] - shownGlucose) > 50) // invalid trend check
+        if (((shownGlucose - trend[i+1]) > 50) || ((trend[i+1] - shownGlucose) > 50)) // invalid trend check
            continue;
         else if (trend[i+1] > shownGlucose)
            shownGlucose = trend[i+1];   
@@ -376,7 +382,7 @@ float Read_Memory() {
     {
       for (int i=0; i<15; i++)                                             // taking the highest value
       {
-        if (((shownGlucose - trend[i+1]) > 50) || (trend[i+1] - shownGlucose) > 50) // invalid trend check
+        if (((shownGlucose - trend[i+1]) > 50) || ((trend[i+1] - shownGlucose) > 50)) // invalid trend check
            continue;
         else if (trend[i+1] > shownGlucose)
            shownGlucose = trend[i+1];
@@ -386,22 +392,23 @@ float Read_Memory() {
     {
       for (int i=0; i<15; i++)
       {
-        if (((shownGlucose - trend[i+1]) > 50) || (trend[i+1] - shownGlucose) > 50) // invalid trend check
+        if (((shownGlucose - trend[i+1]) > 50) || ((trend[i+1] - shownGlucose) > 50)) // invalid trend check
            continue;
         else if (trend[i+1] < shownGlucose)
            shownGlucose = trend[i+1];
       }
     }
     else
-       shownGlucose = currentGlucose;
+       shownGlucose = currentGlucose; 
 
     if ((lastGlucose == currentGlucose) && (sensorMinutesElapse > 21000)) // Expired sensor check
       noDiffCount++;
 
     if (lastGlucose != currentGlucose) // Reset the counter
       noDiffCount = 0;
-      
-    lastGlucose = currentGlucose; 
+
+    if (currentGlucose != 0)
+      lastGlucose = currentGlucose; 
 
     
     NFCReady = 2;
@@ -429,8 +436,8 @@ String Build_Packet(float glucose) {
   
 // Let's build a String which xDrip accepts as a BTWixel packet
 
-      String packet = ""; 
       unsigned long raw = glucose*1000; // raw_value
+      String packet = "";
       packet = String(raw);
       packet += ' ';
       packet += String(batteryMv);
@@ -438,40 +445,47 @@ String Build_Packet(float glucose) {
       packet += String(batteryPcnt);
       packet += ' ';
       packet += String(sensorMinutesElapse);
-      Serial.println();
+      Serial.println("");
       Serial.print("Glucose level: ");
       Serial.print(glucose);
-      Serial.println();
+      Serial.println("");
       Serial.print("15 minutes-trend: ");
-      Serial.println();
+      Serial.println("");
       for (int i=0; i<16; i++)
       {
         Serial.print(trend[i]);
-        Serial.println();
+        Serial.println("");
       }
       Serial.print("Battery level: ");
       Serial.print(batteryPcnt);
       Serial.print("%");
-      Serial.println();
+      Serial.println("");
       Serial.print("Battery mVolts: ");
       Serial.print(batteryMv);
       Serial.print("mV");
-      Serial.println();
+      Serial.println("");
       Serial.print("Sensor lifetime: ");
       Serial.print(sensorMinutesElapse);
       Serial.print(" minutes elapsed");
-      Serial.println();
+      Serial.println("");
       return packet;
 }
 
 void Send_Packet(String packet) {
    if ((packet.substring(0,1) != "0"))
     {
-      Serial.println();
+      Serial.println("");
       Serial.print("xDrip packet: ");
       Serial.print(packet);
-      Serial.println();
+      Serial.println("");
       ble_Serial.print(packet);
+      delay(1000);
+    }
+   else
+    {
+      Serial.println("");
+      Serial.print("Packet not sent! Maybe a corrupt scan or an expired sensor.");
+      Serial.println("");
       delay(1000);
     }
   }
@@ -571,7 +585,7 @@ void lowBatterySleep() {
  Serial.print("Battery low! LEVEL: ");
  Serial.print(batteryPcnt);
  Serial.print("%");
- Serial.println();
+ Serial.println("");
  delay(100);
 
  // Switch LED on and then off shortly
@@ -606,6 +620,7 @@ void loop() {
     {
       batteryLow = 0;
       wakeUp();
+      delay(100);
     }
   }
   if (NFCReady == 0)
