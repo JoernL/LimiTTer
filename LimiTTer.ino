@@ -202,6 +202,8 @@ float Read_Memory() {
  float shownGlucose;
  float trendGlucose;
  int glucosePointer;
+ int validTrendCounter = 0;
+ float validTrend[16];
   
  for ( int b = 3; b < 16; b++) {
  
@@ -345,57 +347,49 @@ float Read_Memory() {
     if (FirstRun == 1)
        lastGlucose = currentGlucose;
 
-    shownGlucose = trend[0];
-    
     for (int i=0; i<16; i++)
     {
       if (((lastGlucose - trend[i]) > 50) || ((trend[i] - lastGlucose) > 50)) // invalid trend check
          continue;
       else
       {
-         shownGlucose = trend[i];
-         break;
+         validTrend[validTrendCounter] = trend[i];
+         validTrendCounter++;
       }
     }
     
+    shownGlucose = validTrend[0];
+    
     if ((lastGlucose < currentGlucose) && (currentGlucose < trendGlucose)) // apex from RISE -> FALL
     {
-      for (int i=0; i<15; i++)                                             // taking the lowest value
+      for (int i=0; i < validTrendCounter; i++) // taking the lowest value
       {
-        if (((shownGlucose - trend[i+1]) > 50) || ((trend[i+1] - shownGlucose) > 50)) // invalid trend check
-           continue;
-        else if (trend[i+1] < shownGlucose)
-           shownGlucose = trend[i+1];   
+        if (validTrend[i] < shownGlucose)
+           shownGlucose = validTrend[i];   
       }
     }
     else if (lastGlucose < currentGlucose) // RISE - taking the highest value
     {
-      for (int i=0; i<15; i++)
+      for (int i=0; i < validTrendCounter; i++)
       {
-        if (((shownGlucose - trend[i+1]) > 50) || ((trend[i+1] - shownGlucose) > 50)) // invalid trend check
-           continue;
-        else if (trend[i+1] > shownGlucose)
-           shownGlucose = trend[i+1];   
+        if (validTrend[i] > shownGlucose)
+           shownGlucose = validTrend[i];   
       }
     }
     else if ((lastGlucose > currentGlucose) && (currentGlucose > trendGlucose)) // apex from FALL -> RISE
     {
-      for (int i=0; i<15; i++)                                             // taking the highest value
+      for (int i=0; i < validTrendCounter; i++) // taking the highest value
       {
-        if (((shownGlucose - trend[i+1]) > 50) || ((trend[i+1] - shownGlucose) > 50)) // invalid trend check
-           continue;
-        else if (trend[i+1] > shownGlucose)
-           shownGlucose = trend[i+1];
+        if (validTrend[i] > shownGlucose)
+           shownGlucose = validTrend[i];   
       }
     }
     else if (lastGlucose > currentGlucose) // FALLS - taking the lowest value
     {
-      for (int i=0; i<15; i++)
+      for (int i=0; i < validTrendCounter; i++)
       {
-        if (((shownGlucose - trend[i+1]) > 50) || ((trend[i+1] - shownGlucose) > 50)) // invalid trend check
-           continue;
-        else if (trend[i+1] < shownGlucose)
-           shownGlucose = trend[i+1];
+        if (validTrend[i] < shownGlucose)
+           shownGlucose = validTrend[i];   
       }
     }
     else
