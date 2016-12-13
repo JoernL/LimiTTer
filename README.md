@@ -3,7 +3,7 @@ Transmitter for the Freestyle Libre FGM system
 
 With the LimiTTer you are able to transform the Freestyle Libre FGM system into a real
 Continous Glucose Monitoring System (CGMS). That means that you don't have to manually
-scan the sensor with the reader. The LimiTTer do this for you - every 5 minutes. It sends
+scan the sensor with the reader. The LimiTTer does this for you - every 5 minutes. It sends
 the glucose value to your smartphone which must have the xDrip app installed. xDrip is really
 a great and matured app for Android. It can send the glucose values to your smartwatch or
 via Nightscout into the cloud. The most important feature is to having a night guard.
