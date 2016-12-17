@@ -198,10 +198,11 @@ float Read_Memory() {
  String trendValues = "";
  String hexMinutes = "";
  String elapsedMinutes = "";
- float pointerGlucose;
+ float trendOneGlucose;
+ float trendTwoGlucose;
  float currentGlucose;
  float shownGlucose;
- float trendGlucose;
+ float averageGlucose = 0;
  int glucosePointer;
  int validTrendCounter = 0;
  float validTrend[16];
@@ -315,62 +316,63 @@ float Read_Memory() {
         {
           if (glucosePointer == 0)
           {
-            String p = trendValues.substring(i+2,i+4) + trendValues.substring(i,i+2);
-            String g = trendValues.substring(190,192) + trendValues.substring(188,190);
-            String h = trendValues.substring(178,180) + trendValues.substring(176,178);
-            pointerGlucose = Glucose_Reading(strtoul(p.c_str(), NULL ,16));
-            currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            trendGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
+            String trendNow = trendValues.substring(190,192) + trendValues.substring(188,190);
+            String trendOne = trendValues.substring(178,180) + trendValues.substring(176,178);
+            String trendTwo = trendValues.substring(166,168) + trendValues.substring(164,166);
+            currentGlucose = Glucose_Reading(strtoul(trendNow.c_str(), NULL ,16));
+            trendOneGlucose = Glucose_Reading(strtoul(trendOne.c_str(), NULL ,16));
+            trendTwoGlucose = Glucose_Reading(strtoul(trendTwo.c_str(), NULL ,16));
 
             if (FirstRun == 1)
                lastGlucose = currentGlucose;
        
             if (((lastGlucose - currentGlucose) > 50) || ((currentGlucose - lastGlucose) > 50))
             {
-               if (((lastGlucose - trendGlucose) > 50) || ((trendGlucose - lastGlucose) > 50))
-                  currentGlucose = pointerGlucose;
+               if (((lastGlucose - trendOneGlucose) > 50) || ((trendOneGlucose - lastGlucose) > 50))
+                  currentGlucose = trendTwoGlucose;
                else
-                  currentGlucose = trendGlucose;
+                  currentGlucose = trendOneGlucose;
             }
           }
           else if (glucosePointer == 1)
           {
-            String p = trendValues.substring(i+2,i+4) + trendValues.substring(i,i+2);
-            String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
-            String h = trendValues.substring(190,192) + trendValues.substring(188,190);
-            pointerGlucose = Glucose_Reading(strtoul(p.c_str(), NULL ,16));
-            currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            trendGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
+            String trendNow = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
+            String trendOne = trendValues.substring(190,192) + trendValues.substring(188,190);
+            String trendTwo = trendValues.substring(178,180) + trendValues.substring(176,178);
+            currentGlucose = Glucose_Reading(strtoul(trendNow.c_str(), NULL ,16));
+            trendOneGlucose = Glucose_Reading(strtoul(trendOne.c_str(), NULL ,16));
+            trendTwoGlucose = Glucose_Reading(strtoul(trendTwo.c_str(), NULL ,16));
 
             if (FirstRun == 1)
                lastGlucose = currentGlucose;
                
             if (((lastGlucose - currentGlucose) > 50) || ((currentGlucose - lastGlucose) > 50))
             {
-               if (((lastGlucose - trendGlucose) > 50) || ((trendGlucose - lastGlucose) > 50))
-                  currentGlucose = pointerGlucose;
+               if (((lastGlucose - trendOneGlucose) > 50) || ((trendOneGlucose - lastGlucose) > 50))
+                  currentGlucose = trendTwoGlucose;
                else
-                  currentGlucose = trendGlucose;
+                  currentGlucose = trendOneGlucose;
             }
           }
           else
           {
-            String p = trendValues.substring(i+2,i+4) + trendValues.substring(i,i+2);
-            String g = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
-            String h = trendValues.substring(i-22,i-20) + trendValues.substring(i-24,i-22);
-            pointerGlucose = Glucose_Reading(strtoul(p.c_str(), NULL ,16));
-            currentGlucose = Glucose_Reading(strtoul(g.c_str(), NULL ,16));
-            trendGlucose = Glucose_Reading(strtoul(h.c_str(), NULL ,16));
+            String trendNow = trendValues.substring(i-10,i-8) + trendValues.substring(i-12,i-10);
+            String trendOne = trendValues.substring(i-22,i-20) + trendValues.substring(i-24,i-22);
+            String trendTwo = trendValues.substring(i-34,i-32) + trendValues.substring(i-36,i-34);
+            currentGlucose = Glucose_Reading(strtoul(trendNow.c_str(), NULL ,16));
+            trendOneGlucose = Glucose_Reading(strtoul(trendOne.c_str(), NULL ,16));
+            trendTwoGlucose = Glucose_Reading(strtoul(trendTwo.c_str(), NULL ,16));
+            
 
             if (FirstRun == 1)
                lastGlucose = currentGlucose;
                
             if (((lastGlucose - currentGlucose) > 50) || ((currentGlucose - lastGlucose) > 50))
             {
-               if (((lastGlucose - trendGlucose) > 50) || ((trendGlucose - lastGlucose) > 50))
-                  currentGlucose = pointerGlucose;
+               if (((lastGlucose - trendOneGlucose) > 50) || ((trendOneGlucose - lastGlucose) > 50))
+                  currentGlucose = trendTwoGlucose;
                else
-                  currentGlucose = trendGlucose;
+                  currentGlucose = trendOneGlucose;
             }
           }
         }  
@@ -395,46 +397,19 @@ float Read_Memory() {
     }
 
     if (validTrendCounter > 0)
-    {   
-      shownGlucose = validTrend[0];
-    
-      if ((lastGlucose < currentGlucose) && (currentGlucose < trendGlucose)) // apex from RISE -> FALL
-      {
-        for (int i=0; i < validTrendCounter; i++) // taking the lowest value
-        {
-          if (validTrend[i] < shownGlucose)
-             shownGlucose = validTrend[i];   
-        }
-      }
-      else if (lastGlucose < currentGlucose) // RISE - taking the highest value
-      {
-        for (int i=0; i < validTrendCounter; i++)
-        {
-          if (validTrend[i] > shownGlucose)
-             shownGlucose = validTrend[i];   
-        }
-      }
-      else if ((lastGlucose > currentGlucose) && (currentGlucose > trendGlucose)) // apex from FALL -> RISE
-      {
-        for (int i=0; i < validTrendCounter; i++) // taking the highest value
-        {
-          if (validTrend[i] > shownGlucose)
-             shownGlucose = validTrend[i];   
-        }
-      }
-      else if (lastGlucose > currentGlucose) // FALLS - taking the lowest value
-      {
-        for (int i=0; i < validTrendCounter; i++)
-        { 
-          if (validTrend[i] < shownGlucose)
-             shownGlucose = validTrend[i];   
-        }
-      }
+    { 
+      for (int i=0; i < validTrendCounter; i++)
+         averageGlucose += validTrend[i];
+         
+      averageGlucose = averageGlucose / validTrendCounter;
+      
+      if (((lastGlucose - currentGlucose) > 50) || ((currentGlucose - lastGlucose) > 50))
+         shownGlucose = averageGlucose; // If currentGlucose is still invalid take the average value
       else
-         shownGlucose = currentGlucose;
+         shownGlucose = currentGlucose; // All went well. Take and show the current value
     }
     else
-      shownGlucose = currentGlucose;
+      shownGlucose = currentGlucose; // If all is going wrong, nevertheless take and show a value 
 
     if ((lastGlucose == currentGlucose) && (sensorMinutesElapse > 21000)) // Expired sensor check
       noDiffCount++;
