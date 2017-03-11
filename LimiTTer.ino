@@ -3,9 +3,7 @@
    and sends the data to the xDrip Android app. You can
    see the data in the serial monitor of Arduino IDE, too.
    If you want another scan interval, simply change the
-   sleepTime value. To work with Android 4 you have to disable
-   all lines containing a "for Android 4" comment and set the
-   sleep time to 36.
+   SLEEP_TIME value. 
      
    This sketch is based on a sample sketch for the BM019 module
    from Solutions Cubed.
@@ -18,9 +16,10 @@
    MOSI: pin 11     MOSI: pin 5 
    MISO: pin 12     MISO: pin4
    SCK: pin 13      SCK: pin 6
-   I/O: pin 3 (VCC with Android 4)  VCC: pin 9 
-   I/O: pin 5                       TX:  pin 2
-   I/O: pin 6                       RX:  pin 4
+   I/O: pin 2                   BLE_CHK: pin 15 
+   I/O: pin 3                       VCC: pin 9 
+   I/O: pin 5                        TX: pin 2
+   I/O: pin 6                        RX: pin 4
 */
 
 #include <SPI.h>
@@ -31,6 +30,9 @@
 
 #define MIN_V 3450 // battery empty level
 #define MAX_V 4050 // battery full level
+#define MAX_BLE_WAIT 80 // Maximum bluetooth re-connect time in seconds 
+#define SLEEP_TIME 34 // SleepTime (7 points are about 1 minute)
+#define MAX_NFC_READTRIES 10 // Amount of tries for every nfc block-scan
 
 const int SSPin = 10;  // Slave Select pin
 const int IRQPin = 9;  // Sends wake-up pulse for BM019
@@ -38,6 +40,7 @@ const int NFCPin1 = 7; // Power pin BM019
 const int NFCPin2 = 8; // Power pin BM019
 const int NFCPin3 = 4; // Power pin BM019
 const int BLEPin = 3; // BLE power pin.
+const int BLEState = 2; // BLE connection state pin
 const int MOSIPin = 11;
 const int SCKPin = 13;
 byte RXBuffer[24];
@@ -46,7 +49,6 @@ byte FirstRun = 1;
 byte batteryLow;
 int batteryPcnt;
 long batteryMv;
-int sleepTime = 32; // SleepTime. Set this to 36 for Android 4
 int noDiffCount = 0;
 int sensorMinutesElapse;
 float lastGlucose;
@@ -65,8 +67,9 @@ void setup() {
     digitalWrite(NFCPin2, HIGH);
     pinMode(NFCPin3, OUTPUT);
     digitalWrite(NFCPin3, HIGH);
-    pinMode(BLEPin, OUTPUT); // Disable this for Android 4
-    digitalWrite(BLEPin, HIGH); // Disable this for Android 4
+    pinMode(BLEPin, OUTPUT);
+    digitalWrite(BLEPin, HIGH);
+    pinMode(BLEState, INPUT);
     pinMode(MOSIPin, OUTPUT);
     pinMode(SCKPin, OUTPUT);
 
@@ -206,9 +209,13 @@ float Read_Memory() {
  int glucosePointer;
  int validTrendCounter = 0;
  float validTrend[16];
+ byte readError = 0;
+ int readTry;
   
  for ( int b = 3; b < 16; b++) {
- 
+  readTry = 0;
+  do {
+  readError = 0;   
   digitalWrite(SSPin, LOW);
   SPI.transfer(0x00);  // SPI control byte to send command to CR95HF
   SPI.transfer(0x04);  // Send Receive CR95HF command
@@ -234,7 +241,8 @@ float Read_Memory() {
   RXBuffer[1] = SPI.transfer(0);  // length of data
  for (byte i=0;i<RXBuffer[1];i++)
    RXBuffer[i+2]=SPI.transfer(0);  // data
-   
+ if (RXBuffer[0] != 128)
+     readError = 1;  
   digitalWrite(SSPin, HIGH);
   delay(1);
   
@@ -250,12 +258,19 @@ float Read_Memory() {
       pout[1] = hex[ *pin     & 0xF];
   }
   pout[0] = 0;
-  Serial.println(str);
-  trendValues += str;
-
+  if (!readError)       // is response code good?
+  { 
+    Serial.println(str);
+    trendValues += str;
+  }
+  readTry++;
+  } while( (readError) && (readTry < MAX_NFC_READTRIES) );
+  
  }
-
- digitalWrite(SSPin, LOW);
+  readTry = 0;
+  do {
+  readError = 0;  
+  digitalWrite(SSPin, LOW);
   SPI.transfer(0x00);  // SPI control byte to send command to CR95HF
   SPI.transfer(0x04);  // Send Receive CR95HF command
   SPI.transfer(0x03);  // length of data that follows
@@ -280,7 +295,8 @@ float Read_Memory() {
   RXBuffer[1] = SPI.transfer(0);  // length of data
  for (byte i=0;i<RXBuffer[1];i++)
    RXBuffer[i+2]=SPI.transfer(0);  // data
-   
+ if (RXBuffer[0] != 128)
+     readError = 1;  
   digitalWrite(SSPin, HIGH);
   delay(1);
   
@@ -296,9 +312,12 @@ float Read_Memory() {
       pout[1] = hex[ *pin     & 0xF];
   }
   pout[0] = 0;
-  elapsedMinutes += str;
-    
-  if (RXBuffer[0] == 128) // is response code good?
+  if (!readError)
+    elapsedMinutes += str;
+  readTry++;
+  } while( (readError) && (readTry < MAX_NFC_READTRIES) );
+      
+  if (!readError)
     {
       hexMinutes = elapsedMinutes.substring(10,12) + elapsedMinutes.substring(8,10);
       hexPointer = trendValues.substring(4,6);
@@ -434,7 +453,9 @@ float Read_Memory() {
     {
     Serial.print("Read Memory Block Command FAIL");
     NFCReady = 0;
+    readError = 0;
     }
+    return 0;
  }
 
 float Glucose_Reading(unsigned int val) {
@@ -450,7 +471,7 @@ String Build_Packet(float glucose) {
       String packet = "";
       packet = String(raw);
       packet += ' ';
-      packet += String(batteryMv);
+      packet += "216";
       packet += ' ';
       packet += String(batteryPcnt);
       packet += ' ';
@@ -536,9 +557,10 @@ void goToSleep(const byte interval, int time) {
  digitalWrite(NFCPin2, LOW); // for maximum power save on BM019.
  digitalWrite(NFCPin3, LOW);
  digitalWrite(IRQPin, LOW);
- digitalWrite(5, LOW); // Disable this for Android 4
- digitalWrite(6, LOW); // Disable this for Android 4
- digitalWrite(BLEPin, LOW); // Disable this for Android 4
+ digitalWrite(5, LOW);
+ digitalWrite(6, LOW);
+ digitalWrite(BLEPin, LOW);
+ digitalWrite(BLEState, LOW);
  
  for (int i=0; i<time; i++) {
  MCUSR = 0;                         
@@ -559,8 +581,14 @@ void wakeUp() {
     sleep_disable();
     power_all_enable();
     wdt_reset();
-    restartBLE(); // Disable this for Android 4
-    delay(40000); // Disable this for Android 4
+    restartBLE();
+    
+    for (int i=0; ( (i < MAX_BLE_WAIT) && (digitalRead(BLEState) != HIGH) ); i++)
+    {
+      delay(1000);
+      Serial.print("Waiting for BLE connection ...");
+      Serial.println("");
+    }    
     digitalWrite(NFCPin1, HIGH);
     digitalWrite(NFCPin2, HIGH);
     digitalWrite(NFCPin3, HIGH);
@@ -588,9 +616,9 @@ void lowBatterySleep() {
  digitalWrite(NFCPin2, LOW); // for maximum power save on BM019.
  digitalWrite(NFCPin3, LOW);
  digitalWrite(IRQPin, LOW);
- digitalWrite(5, LOW); // Disable this for Android 4
- digitalWrite(6, LOW); // Disable this for Android 4
- digitalWrite(BLEPin, LOW); // Disable this for Android 4
+ digitalWrite(5, LOW);
+ digitalWrite(6, LOW);
+ digitalWrite(BLEPin, LOW);
 
  Serial.print("Battery low! LEVEL: ");
  Serial.print(batteryPcnt);
@@ -647,7 +675,7 @@ void loop() {
     delay(1000);
     }
     if (NFCReady == 1) {
-    goToSleep (0b100001, sleepTime);
+    goToSleep (0b100001, SLEEP_TIME);
     wakeUp();
     delay(100); 
     }
@@ -656,7 +684,7 @@ void loop() {
   {
     String xdripPacket = Build_Packet(Read_Memory());
     Send_Packet(xdripPacket);
-    goToSleep (0b100001, sleepTime);
+    goToSleep (0b100001, SLEEP_TIME);
     wakeUp();
     delay(100);
   }
