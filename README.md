@@ -1,4 +1,6 @@
 # LimiTTer
+
+[![Join the chat at https://gitter.im/JoernL/LimiTTer](https://badges.gitter.im/JoernL/LimiTTer.svg)](https://gitter.im/JoernL/LimiTTer?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 Transmitter for the Freestyle Libre FGM system
 
 With the LimiTTer you are able to transform the Freestyle Libre FGM system into a real
