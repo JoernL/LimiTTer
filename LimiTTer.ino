@@ -88,7 +88,7 @@ void setup() {
     }
     delay(100);
     ble_Serial.write("AT+NAMELimiTTer");
-    delay(100);
+    delay(500);
     ble_Serial.write("AT+RESET");
     delay(500);
         
